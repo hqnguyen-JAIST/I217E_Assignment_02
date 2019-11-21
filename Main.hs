@@ -32,7 +32,7 @@ match :: Substitution -> Term -> LazyTerm -> Maybe Substitution
 match sigma (App (Con f) us) (LazyApp (LazyCon g _) vs _)
     | f == g = match sigma us vs
 match sigma (Con f) (LazyCon g _)
-    | f == g = Just []
+    | f == g = Just sigma
 match sigma (Var x) ws =
     case lookup x sigma of
         Just wsP | wsP == ws -> Just sigma
@@ -84,6 +84,27 @@ evaluate (LazyVar x NotEvaluated) rs =
         Just t  -> evaluate t rs
         Nothing -> Just (LazyVar x Evaluated)
 
+next :: LazyTerm -> TRS -> Maybe LazyTerm
+next (LazyApp u v Evaluated) rs = Nothing
+next (LazyApp u v NotEvaluated) rs = 
+    case next v rs of
+        Just vP -> Just (LazyApp u vP NotEvaluated)
+        Nothing ->
+            case next u rs of
+                Just uP -> Just (LazyApp uP v NotEvaluated)
+                Nothing -> matchOneRule (LazyApp u v NotEvaluated) rs 
+next (LazyCon f Evaluated) rs = Nothing
+next (LazyCon f NotEvaluated) rs = matchOneRule (LazyCon f NotEvaluated) rs
+next (LazyVar x Evaluated) rs = Nothing
+next (LazyVar x NotEvaluated) rs = matchOneRule (LazyVar x NotEvaluated) rs
+
+getNext t k rs = do
+    print k
+    print (lazyTermToTerm t)
+    case next t rs of
+        Just s  -> getNext s (k+1) rs
+        Nothing -> print "Finish"
+
 main = do
     file : _ <- getArgs
     m <- readTRSFile file
@@ -91,8 +112,10 @@ main = do
         Left e    -> print e
         Right trs -> do
             case lookup (Con "main") trs of
-                Just s -> case evaluate (termToLazyTerm s) trs of 
-                    Just result -> print (lazyTermToTerm result)
+                Just s -> 
+                    case evaluate (termToLazyTerm s) trs of 
+                        Just result -> do
+                            print (lazyTermToTerm result)
 
 -- putStrLn (showTRS trs)
 -- putStrLn (show (nf1 trs (Con "main")))
