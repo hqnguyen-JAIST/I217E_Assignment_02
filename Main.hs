@@ -12,6 +12,7 @@ showTRS rules = unlines [ showRule rule | rule <- rules ]
 
 
 -- Implementation
+
 data EvaluateQuery = Evaluated | NotEvaluated
     deriving (Eq, Show)
 data LazyTerm = LazyVar String EvaluateQuery | LazyCon String EvaluateQuery | LazyApp LazyTerm LazyTerm EvaluateQuery
@@ -98,6 +99,7 @@ next (LazyCon f NotEvaluated) rs = matchOneRule (LazyCon f NotEvaluated) rs
 next (LazyVar x Evaluated) rs = Nothing
 next (LazyVar x NotEvaluated) rs = matchOneRule (LazyVar x NotEvaluated) rs
 
+getNext :: LazyTerm -> Int -> TRS -> IO ()
 getNext t k rs = do
     print k
     print (lazyTermToTerm t)
@@ -105,17 +107,27 @@ getNext t k rs = do
         Just s  -> getNext s (k+1) rs
         Nothing -> print "Finish"
 
+getMode [] = Nothing
+getMode (arg : _) =
+    case arg of
+        "DEBUG" -> Just arg
+        _       -> Nothing
+
 main = do
-    file : _ <- getArgs
+    file : otherArgs <- getArgs
     m <- readTRSFile file
     case m of
         Left e    -> print e
         Right trs -> do
             case lookup (Con "main") trs of
-                Just s -> 
-                    case evaluate (termToLazyTerm s) trs of 
-                        Just result -> do
-                            print (lazyTermToTerm result)
+                Just s  -> 
+                    case getMode otherArgs of
+                        Just "DEBUG" -> getNext (termToLazyTerm s) 0 trs
+                        Nothing      ->
+                            case evaluate (termToLazyTerm s) trs of 
+                                Just result -> print (lazyTermToTerm result)
+                                Nothing     -> print "Cannot trasnform to normal form"
+                Nothing -> print "Cannot find main function"
 
 -- putStrLn (showTRS trs)
 -- putStrLn (show (nf1 trs (Con "main")))
