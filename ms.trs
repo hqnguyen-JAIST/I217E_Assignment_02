@@ -1,0 +1,112 @@
+not true = false .
+not false = true .
+
+and true true = true .
+and X false = false .
+and false Y = false .
+
+add X 0 = X .
+add X (s Y) = s (add X Y) .
+
+subtract X 0 = X .
+subtract (s X) (s Y) = subtract X Y .
+
+append nil YS = YS .
+append (cons X XS) YS = cons X (append XS YS) .
+
+foldl F I nil = I .
+foldl F I (cons X XS) = foldl F (F I X) XS .
+
+push XS X = cons X XS .
+
+eq 0 0 = true .
+eq 0 (s Y) = false .
+eq (s X) 0 = false .
+eq (s X) (s Y) = eq X Y .
+
+lt X 0 = false .
+lt 0 (s Y) = true .
+lt (s X) (s Y) = lt X Y .
+
+geq X Y = not (lt X Y) .
+
+filter P nil = nil .
+filter P (cons X XS) = if_filter P X XS (P X) .
+if_filter P X XS true = cons X (filter P XS) .
+if_filter P X XS false = filter P XS .
+
+map F nil = nil .
+map F (cons X XS) = cons (F X) (map F XS) .
+
+range 0 = nil .
+range (s X) = cons (s X) (range X) .
+
+not_exist nil X = true .
+not_exist (cons Y YS) X = if_not_exist (cons Y YS) X (not (eq X Y)) .
+if_not_exist (cons Y YS) X true = not_exist YS X .
+if_not_exist (cons Y YS) X false = false .
+
+search N K J RES = if_search N K J RES (eq J K) .
+if_search N K J RES true = cons RES nil .
+if_search N K J RES false = foldl append nil (map (search N K (s J)) (map (push RES) (filter (not_exist RES) (range N)))) .
+
+check_one_from_two ST = and (lt ST 15) (geq ST 6) .
+get_one_from_two ST = subtract 15 ST .
+
+check_row (s N) I ST nil = true .
+check_row (s N) I ST (cons X XS) = if_check_row (s N) I ST (cons X XS) (eq I N) .
+if_check_row (s N) I ST (cons X XS) true = and (check_one_from_two (add X ST)) (check_row (s N) 0 0 XS) .
+if_check_row (s N) I ST (cons X XS) false = check_row (s N) (s I) (add ST X) XS .
+
+check_duplicate nil = true .
+check_duplicate (cons X XS) = and (not_exist XS X) (check_duplicate XS) .
+
+update_row (s N) I ST nil = nil .
+update_row (s N) I ST (cons X XS) = if_update_row (s N) I ST (cons X XS) (eq I N) .
+if_update_row (s N) I ST (cons X XS) true = cons X (cons (get_one_from_two (add X ST)) (update_row (s N) 0 0 XS)) .
+if_update_row (s N) I ST (cons X XS) false = cons X (update_row (s N) (s I) (add ST X) XS) .
+
+sum_last_and_append X (cons Y YS) = append YS (cons (add X Y) nil) .
+
+gen_zeros_list 0 = nil .
+gen_zeros_list (s N) = cons 0 (gen_zeros_list N) .
+
+calculate_col (s N) nil = gen_zeros_list (s N) .
+calculate_col (s N) (cons X XS) = sum_last_and_append X (calculate_col (s N) XS) .
+
+reverse_list nil = nil .
+reverse_list (cons X XS) = append (reverse_list XS) (cons X nil) .
+
+valid_to_append nil = true .
+valid_to_append (cons X XS) = and (check_one_from_two X) (valid_to_append XS) .
+
+sum_list nil = 0 .
+sum_list (cons X XS) = add X (sum_list XS) .
+
+update_col N XS = validate_update_col N XS (reverse_list (calculate_col N XS)) .
+validate_update_col N XS YS = if_update_col N XS YS (valid_to_append YS) .
+if_update_col N XS YS false = nil .
+if_update_col N XS YS true = secondary_validate (switch_by_subtract YS) XS N .
+
+switch_by_subtract nil = nil .
+switch_by_subtract (cons X XS) = cons (get_one_from_two X) (switch_by_subtract XS) .
+
+secondary_validate YS XS N = if_secondary_validate YS XS N (eq (sum_list YS) 15) .
+if_secondary_validate YS XS N false = nil .
+if_secondary_validate YS XS N true = third_validate (append YS XS) N .
+
+third_validate XS (s (s N)) = if_third_validate XS N (and (eq 15 (diagonal_sum (s (s N)) 0 (s (s N)) XS)) (eq 15 (diagonal_sum (s (s N)) (s N) N XS))) .
+if_third_validate XS N true = XS .
+if_third_validate XS N false = nil .
+
+diagonal_sum MAXPLUS JSTEPS N nil = 0 .
+diagonal_sum MAXPLUS JSTEPS N (cons X XS) = if_diagonal_sum MAXPLUS JSTEPS N (cons X XS) (eq JSTEPS 0) .
+if_diagonal_sum (s MAXPLUS) JSTEPS N (cons X XS) true = add X (diagonal_sum MAXPLUS N N XS) .
+if_diagonal_sum 0 JSTEPS N (cons X XS) true = 0 .
+if_diagonal_sum MAXPLUS (s JSTEPS) N (cons X XS) false = diagonal_sum MAXPLUS JSTEPS N XS .
+
+not_nil nil = false .
+not_nil (cons X XS) = true .
+
+main = filter check_duplicate (filter not_nil (map (update_col 3) (filter check_duplicate (map (update_row 2 0 0) (filter (check_row 2 0 0) ((search 9 4 0 nil))))))) .
+
